@@ -1,0 +1,11 @@
+{
+  "name": "ai-webcam-gesture-game",
+  "version": "1.0.0",
+  "description": "AI Webcam Hand Gesture Game powered by MediaPipe Tasks Vision",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  }
+}
+
