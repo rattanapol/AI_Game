@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Hand Ninja - เกมตรวจจับท่าทางผ่านเว็บแคม</title>
+  <title>AI Webcam Arcade 5-in-1 - เกมตรวจจับท่าทางด้วย AI</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -11,14 +11,18 @@
     <!-- แถบข้อมูลด้านบน (HUD) -->
     <header class="hud-bar">
       <div class="brand">
-        <span class="brand-icon">🖐️</span>
+        <span class="brand-icon" id="hud-game-icon">🎮</span>
         <div>
-          <h1>AI Hand Ninja</h1>
+          <h1 id="hud-game-title">AI Webcam Arcade (5 เกม)</h1>
           <p id="ai-status" class="status-badge ready">พร้อมเล่น! (กำลังเตรียมระบบ AI...)</p>
         </div>
       </div>
 
       <div class="stats-group">
+        <div class="stat-card player-id-card">
+          <span class="stat-label">รหัสผู้เล่น (4 หลัก)</span>
+          <span id="current-player-id" class="stat-value id-badge">----</span>
+        </div>
         <div class="stat-card">
           <span class="stat-label">คะแนน (SCORE)</span>
           <span id="score-val" class="stat-value">0</span>
@@ -32,14 +36,18 @@
           <span id="time-val" class="stat-value timer">60s</span>
         </div>
         <div class="stat-card">
-          <span class="stat-label">สถิติสูงสุด (BEST)</span>
+          <span class="stat-label">สูงสุด (BEST)</span>
           <span id="best-val" class="stat-value gold">0</span>
         </div>
       </div>
 
-      <div class="gesture-indicator">
-        <span class="gesture-label">ท่าทาง:</span>
-        <span id="gesture-name" class="gesture-pill">รอเริ่มเกม...</span>
+      <div class="hud-right">
+        <div class="gesture-indicator">
+          <span id="gesture-name" class="gesture-pill">รอเริ่มเกม...</span>
+        </div>
+        <button id="open-leaderboard-btn" class="btn-leaderboard" title="ดูตารางคะแนนทั้งหมด">
+          🏆 ตารางคะแนน
+        </button>
       </div>
     </header>
 
@@ -50,43 +58,87 @@
 
       <!-- ปุ่มควบคุมด่วนระหว่างเล่น -->
       <div id="in-game-controls" class="in-game-controls hidden">
+        <button id="back-menu-btn" class="btn-small">🏠 เลือกเกมอื่น</button>
         <button id="toggle-cam-btn" class="btn-small">📷 สลับกล้อง/เมาส์</button>
-        <button id="restart-Quick-btn" class="btn-small">🔄 เริ่มใหม่</button>
+        <button id="restart-quick-btn" class="btn-small">🔄 เริ่มใหม่</button>
       </div>
 
-      <!-- หน้าจอก่อนเริ่มเกม / จบเกม -->
+      <!-- หน้าจอก่อนเริ่มเกม / เลือกเกม 5 เกม / จบเกมและบันทึกคะแนน -->
       <div id="overlay-screen" class="overlay">
-        <div class="modal-card">
-          <h2 id="modal-title">🎯 เกม AI ตรวจจับท่าทางมือ</h2>
-          <p id="modal-subtitle">ควบคุมเกมด้วยการขยับมือผ่านกล้องเว็บแคมแบบเรียลไทม์ (รองรับทั้ง AI Hand Tracking และเมาส์)</p>
+        <div class="modal-card wide-modal">
+          <h2 id="modal-title">🎮 AI Webcam Gesture Arcade (5 เกม)</h2>
+          <p id="modal-subtitle">กรอกรหัสประจำตัว 4 หลัก แล้วเลือกเกมที่ต้องการเล่นผ่านกล้องเว็บแคมด้วย AI หรือเมาส์</p>
 
-          <div class="how-to-play">
-            <div class="rule-item">
-              <span class="rule-emoji">☝️</span>
-              <div>
-                <strong>ชี้นิ้ว / ขยับมือผ่านผลไม้ (Slice)</strong>
-                <p>ขยับปลายนิ้วชี้หรือกวาดมือตัดผลไม้ (🍎 🍉 🍊 🍓 🍍) เพื่อทำคะแนนและสะสมคอมโบ</p>
+          <!-- ช่องกรอกรหัสประจำตัว 4 หลัก -->
+          <div class="player-id-section">
+            <label for="player-id-input">🆔 รหัสประจำตัวผู้เล่น (ตัวเลข 4 หลัก):</label>
+            <div class="player-id-input-row">
+              <input
+                type="text"
+                id="player-id-input"
+                class="pin-input"
+                maxlength="4"
+                inputmode="numeric"
+                pattern="[0-9]{4}"
+                placeholder="เช่น 1234"
+                autocomplete="off"
+              />
+              <button id="save-score-btn" class="btn-save-score hidden">
+                💾 บันทึกคะแนน
+              </button>
+            </div>
+            <p id="id-feedback-msg" class="id-feedback">กรอกตัวเลข 4 หลัก (0000 - 9999) เพื่อใช้บันทึกสถิติคะแนนของคุณ</p>
+          </div>
+
+          <!-- กล่องแสดงคะแนนเมื่อจบเกม -->
+          <div id="final-score-box" class="final-score hidden">
+            <span id="final-game-label">คะแนนรอบนี้ของคุณ</span>
+            <strong id="final-score-number">0</strong>
+            <p id="save-status-text" class="save-status-text"></p>
+          </div>
+
+          <!-- รายการเลือกเกมทั้ง 5 เกม -->
+          <div class="games-grid" id="games-grid">
+            <div class="game-option selected" data-game="ninja">
+              <span class="game-opt-icon">🍉</span>
+              <div class="game-opt-info">
+                <strong>1. AI Hand Ninja</strong>
+                <span>กวาดนิ้วฟันผลไม้ คว้าดาวโบนัส หลบระเบิด</span>
               </div>
             </div>
-            <div class="rule-item">
-              <span class="rule-emoji">🤏</span>
-              <div>
-                <strong>จีบนิ้ว / กำมือ / คลิกค้าง (Grab โบนัส)</strong>
-                <p>จีบนิ้วโป้งชนนิ้วชี้ หรือกำมือ เมื่ออยู่ทับ <strong>ดาวโบนัส (⭐)</strong> เพื่อคว้าคะแนนพิเศษ +50</p>
+            <div class="game-option" data-game="bubble">
+              <span class="game-opt-icon">🫧</span>
+              <div class="game-opt-info">
+                <strong>2. Bubble Popper</strong>
+                <span>จิ้มฟองสบู่หลากสีและเพชรสายฟ้าก่อนลอยหนี</span>
               </div>
             </div>
-            <div class="rule-item">
-              <span class="rule-emoji">💣</span>
-              <div>
-                <strong>ระวังลูกระเบิด!</strong>
-                <p>ห้ามขยับมือไปโดนระเบิด มิฉะนั้นจะถูกลดคะแนน -30 และคอมโบรีเซ็ตเป็น x1</p>
+            <div class="game-option" data-game="catcher">
+              <span class="game-opt-icon">🧺</span>
+              <div class="game-opt-info">
+                <strong>3. Star Catcher</strong>
+                <span>ขยับมือซ้าย-ขวาบังคับตะกร้ารับดาวตกและเพชร</span>
+              </div>
+            </div>
+            <div class="game-option" data-game="mole">
+              <span class="game-opt-icon">🔨</span>
+              <div class="game-opt-info">
+                <strong>4. Whack-a-Mole</strong>
+                <span>ทุบตุ่นน้อยและตุ่นทองคำใน 9 หลุมมิติให้ทันเวลา</span>
+              </div>
+            </div>
+            <div class="game-option" data-game="defender">
+              <span class="game-opt-icon">🚀</span>
+              <div class="game-opt-info">
+                <strong>5. Space Defender</strong>
+                <span>ขยับมือบังคับยานอวกาศยิงเลเซอร์สกัดกั้นเอเลี่ยน</span>
               </div>
             </div>
           </div>
 
-          <div id="final-score-box" class="final-score hidden">
-            <span>คะแนนรอบนี้ของคุณ</span>
-            <strong id="final-score-number">0</strong>
+          <!-- คำอธิบายวิธีเล่นของเกมที่เลือก -->
+          <div id="selected-game-guide" class="selected-game-guide">
+            <strong>วิธีเล่น (AI Hand Ninja):</strong> ขยับปลายนิ้วชี้ตัดผลไม้ (🍎 🍉 🍊) จีบนิ้วคว้าดาวโบนัส (⭐ +50) และห้ามโดนระเบิด (💣 -30)
           </div>
 
           <div id="camera-msg" class="camera-msg hidden"></div>
@@ -96,15 +148,67 @@
               📷 เริ่มเล่นด้วยกล้องเว็บแคม (AI)
             </button>
             <button id="start-mouse-btn" class="btn-secondary">
-              🖱️ เริ่มเล่นทันทีด้วยเมาส์ (ไม่ต้องใช้กล้อง)
+              🖱️ เริ่มเล่นด้วยเมาส์ / ทัชสกรีน
             </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- หน้าต่างตารางคะแนน (Leaderboard Modal) -->
+      <div id="leaderboard-modal" class="overlay hidden">
+        <div class="modal-card wide-modal">
+          <div class="leaderboard-header">
+            <h2>🏆 ตารางบันทึกคะแนนผู้เล่น (รหัส 4 หลัก)</h2>
+            <button id="close-leaderboard-btn" class="btn-close">✕ ปิด</button>
+          </div>
+
+          <!-- แท็บกรองตามเกม -->
+          <div class="leaderboard-tabs" id="leaderboard-tabs">
+            <button class="tab-btn active" data-filter="all">🌟 รวมทุกเกม</button>
+            <button class="tab-btn" data-filter="ninja">🍉 1. Ninja</button>
+            <button class="tab-btn" data-filter="bubble">🫧 2. Bubble</button>
+            <button class="tab-btn" data-filter="catcher">🧺 3. Catcher</button>
+            <button class="tab-btn" data-filter="mole">🔨 4. Mole</button>
+            <button class="tab-btn" data-filter="defender">🚀 5. Space</button>
+          </div>
+
+          <div class="leaderboard-search-row">
+            <input
+              type="text"
+              id="search-id-input"
+              class="search-id-input"
+              maxlength="4"
+              placeholder="🔍 ค้นหารหัส 4 หลัก..."
+            />
+            <div class="leaderboard-actions">
+              <button id="export-csv-btn" class="btn-small">📥 ดาวน์โหลด CSV</button>
+              <button id="clear-scores-btn" class="btn-small danger-text">🗑️ ล้างประวัติ</button>
+            </div>
+          </div>
+
+          <div class="table-container">
+            <table class="score-table">
+              <thead>
+                <tr>
+                  <th>อันดับ</th>
+                  <th>รหัสประจำตัว (4 หลัก)</th>
+                  <th>เกมที่เล่น</th>
+                  <th>คะแนน</th>
+                  <th>เวลาที่บันทึก</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-tbody">
+                <tr>
+                  <td colspan="5" class="empty-row">ยังไม่มีข้อมูลคะแนนที่บันทึกไว้</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
     </main>
   </div>
 
-  <!-- ใช้สคริปต์มาตรฐานเพื่อให้เปิดได้ทั้งผ่าน http://localhost:3000 และดับเบิลคลิกไฟล์ index.html ได้โดยไม่ติด CORS -->
   <script src="game.js"></script>
 </body>
 </html>
